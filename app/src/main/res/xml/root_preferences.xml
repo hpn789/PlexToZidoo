@@ -1,0 +1,58 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/player_settings">
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="useZidooPlayer"
+            android:title="@string/useZidooPlayer_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/plex_settings">
+
+        <EditTextPreference
+            app:defaultValue=""
+            app:key="libraries"
+            app:title="@string/libraries_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:key="path_to_replace"
+            app:useSimpleSummaryProvider="true"
+            android:singleLine="true"
+            android:title="@string/path_to_replace" />
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:key="replaced_with"
+            app:useSimpleSummaryProvider="true"
+            android:singleLine="true"
+            android:title="@string/replaced_with" />
+
+        <SwitchPreference
+            android:enabled="false"
+            android:defaultValue="true"
+            android:key="enableCache"
+            android:title="@string/enableCache_title" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/smb_settings">
+
+        <EditTextPreference
+            app:defaultValue="none"
+            app:key="smbUsername"
+            app:title="@string/smbUsername_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:defaultValue="none"
+            app:key="smbPassword"
+            app:title="@string/smbPassword_title"
+            android:inputType="textPassword"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
