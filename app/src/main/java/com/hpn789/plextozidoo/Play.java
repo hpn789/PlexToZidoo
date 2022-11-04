@@ -68,7 +68,7 @@ public class Play extends AppCompatActivity {
                                 path=plexPathToLocalPath(path);
                                 if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("useZidooPlayer", true))
                                 {
-                                    startZidooPlayer(path);
+                                    startZidooPlayer(path, info.getViewOffset());
                                 }
                                 else
                                 {
@@ -174,8 +174,10 @@ public class Play extends AppCompatActivity {
         return path;
     }
 
-    protected void startZidooPlayer(String path)
+    protected void startZidooPlayer(String path, int viewOffset)
     {
+
+        //see https://github.com/Andy2244/jellyfin-androidtv-zidoo/blob/Zidoo-Edition/app/src/main/java/org/jellyfin/androidtv/ui/playback/ExternalPlayerActivity.java
         Intent newIntent = new Intent();
 
         String from = "Local";

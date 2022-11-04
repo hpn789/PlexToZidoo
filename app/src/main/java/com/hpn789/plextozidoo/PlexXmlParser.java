@@ -63,11 +63,21 @@ public class PlexXmlParser {
         {
             String key = parser.getAttributeValue(null, "key");
             String type = parser.getAttributeValue(null, "type");
+            String viewOffsetText = parser.getAttributeValue(null, "viewOffset");
+            int viewOffset;
+            try
+            {
+                viewOffset = Integer.parseInt(viewOffsetText);
+            }
+            catch(NumberFormatException e)
+            {
+                viewOffset=0;
+            }
             for(PlexMediaType mt : PlexMediaType.values())
             {
                 if(mt.name.equals(type))
                 {
-                    infos.add(new PlexLibraryInfo(key, mt));
+                    infos.add(new PlexLibraryInfo(key, mt, viewOffset));
                 }
             }
         }
