@@ -1,11 +1,29 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <Preference
+        android:key="version"
+        android:selectable="false"
+        android:persistent="false"
+        android:title="@string/version_settings"
+        android:summary="@string/versionName"/>
+
+    <PreferenceCategory app:title="@string/general_settings">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="debug"
+            android:title="@string/debug_title" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/player_settings">
+
         <SwitchPreference
             android:defaultValue="true"
             android:key="useZidooPlayer"
             android:title="@string/useZidooPlayer_title" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/plex_settings">

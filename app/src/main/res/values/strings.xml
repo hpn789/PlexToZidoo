@@ -11,12 +11,15 @@
 
 
     <!-- Preference Titles -->
+    <string name="version_settings">Version</string>
+    <string name="general_settings">General</string>
     <string name="player_settings">Player</string>
     <string name="plex_settings">Plex</string>
     <string name="smb_settings">Smb</string>
 
     <!-- Player Preferences -->
     <string name="useZidooPlayer_title">Use zidoo native player</string>
+    <string name="debug_title">Debug data</string>
     <!-- Plex Preferences -->
     <string name="libraries_title">Plex libraries name to search-in (separated by ",")</string>
     <string name="path_to_replace">Part of the path to replace</string>
@@ -25,5 +28,8 @@
     <!-- Smb Preferences -->
     <string name="smbUsername_title">Smb username (if needed)</string>
     <string name="smbPassword_title">Smb password (if needed)</string>
+
+    <!-- Play activity -->
+    <string name="play_button_title">Play</string>
 
 </resources>

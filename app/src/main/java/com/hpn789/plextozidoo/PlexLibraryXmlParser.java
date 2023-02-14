@@ -7,22 +7,22 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 public class PlexLibraryXmlParser {
 
     // We don't use namespaces
     private static final String ns = null;
     private String path = "";
+    private String videoKey = "";
+    private int duration = 0;
 
-    private String key;
+    private final String libraryKey;
 
     //public List<String> entries = new ArrayList<String>();
 
     public PlexLibraryXmlParser(String aKey)
     {
-        key=aKey;
+        libraryKey = aKey;
     }
 
     public String parse(InputStream in) throws XmlPullParserException, IOException {
@@ -38,6 +38,16 @@ public class PlexLibraryXmlParser {
         }
     }
 
+    public String getVideoKey()
+    {
+        return videoKey;
+    }
+
+    public int getDuration()
+    {
+        return duration;
+    }
+
     private void readXML(XmlPullParser parser) throws XmlPullParserException, IOException {
 
         parser.require(XmlPullParser.START_TAG, ns, "MediaContainer");
@@ -47,9 +57,24 @@ public class PlexLibraryXmlParser {
             }
             String name = parser.getName();
             // Starts by looking for the entry tag
-            if (name.equals("Video")) {
+            if(name.equals("Video"))
+            {
+                videoKey = parser.getAttributeValue(null, "ratingKey");
+
+                String durationText = parser.getAttributeValue(null, "duration");
+                try
+                {
+                    duration = Integer.parseInt(durationText);
+                }
+                catch(NumberFormatException e)
+                {
+                    duration = 0;
+                }
+
                 readVideo(parser);
-            } else {
+            }
+            else
+            {
                 skip(parser);
             }
         }
@@ -88,7 +113,7 @@ public class PlexLibraryXmlParser {
     // Processes link tags in the feed.
     private void readPart(XmlPullParser parser) throws IOException, XmlPullParserException {
         String keyAttribute = parser.getAttributeValue(null, "key");
-        if(keyAttribute.equals(key))
+        if(keyAttribute.equals(libraryKey))
         {
             path = parser.getAttributeValue(null, "file");
         }
