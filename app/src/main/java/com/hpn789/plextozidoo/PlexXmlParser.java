@@ -14,15 +14,15 @@ public class PlexXmlParser {
 
     // We don't use namespaces
     private static final String ns = null;
-    private List<PlexLibraryInfo> infos = new ArrayList<>();
+    private final List<PlexLibraryInfo> infos = new ArrayList<>();
 
-    private List<String> titles;
+    private final List<String> titles;
 
     //public List<String> entries = new ArrayList<String>();
 
     public PlexXmlParser(List<String> aTitles)
     {
-        titles=aTitles;
+        titles = aTitles;
     }
 
     public List<PlexLibraryInfo> parse(InputStream in) throws XmlPullParserException, IOException {
@@ -56,28 +56,19 @@ public class PlexXmlParser {
         }
     }
 
-    private void readDirectory(XmlPullParser parser) throws XmlPullParserException, IOException {
+    private void readDirectory(XmlPullParser parser) {
 
         String titleValue = parser.getAttributeValue(null, "title");
         if(titles.contains(titleValue))
         {
             String key = parser.getAttributeValue(null, "key");
             String type = parser.getAttributeValue(null, "type");
-            String viewOffsetText = parser.getAttributeValue(null, "viewOffset");
-            int viewOffset;
-            try
-            {
-                viewOffset = Integer.parseInt(viewOffsetText);
-            }
-            catch(NumberFormatException e)
-            {
-                viewOffset=0;
-            }
+
             for(PlexMediaType mt : PlexMediaType.values())
             {
                 if(mt.name.equals(type))
                 {
-                    infos.add(new PlexLibraryInfo(key, mt, viewOffset));
+                    infos.add(new PlexLibraryInfo(key, mt));
                 }
             }
         }

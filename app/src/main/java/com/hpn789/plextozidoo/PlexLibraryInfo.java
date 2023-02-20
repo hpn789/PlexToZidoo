@@ -1,15 +1,13 @@
 package com.hpn789.plextozidoo;
 
 public class PlexLibraryInfo {
-    private String key;
-    private PlexMediaType type;
-    private int viewOffset;
+    private final String key;
+    private final PlexMediaType type;
 
-    public PlexLibraryInfo(String aKey, PlexMediaType aType, int aViewOffset)
+    public PlexLibraryInfo(String aKey, PlexMediaType aType)
     {
-        key=aKey;
-        type=aType;
-        viewOffset=aViewOffset;
+        key = aKey;
+        type = aType;
     }
 
     public PlexMediaType getType() {
@@ -20,7 +18,4 @@ public class PlexLibraryInfo {
         return key;
     }
 
-    public int getViewOffset() {
-        return viewOffset;
-    }
 }
