@@ -14,6 +14,7 @@ public class PlexLibraryXmlParser {
     private static final String ns = null;
     private String path = "";
     private String videoKey = "";
+    private String videoTitle = "";
     private int duration = 0;
 
     private final String libraryKey;
@@ -42,6 +43,10 @@ public class PlexLibraryXmlParser {
     {
         return videoKey;
     }
+    public String getVideoTitle()
+    {
+        return videoTitle;
+    }
 
     public int getDuration()
     {
@@ -60,6 +65,7 @@ public class PlexLibraryXmlParser {
             if(name.equals("Video"))
             {
                 videoKey = parser.getAttributeValue(null, "ratingKey");
+                videoTitle = parser.getAttributeValue(null, "title");
 
                 String durationText = parser.getAttributeValue(null, "duration");
                 try

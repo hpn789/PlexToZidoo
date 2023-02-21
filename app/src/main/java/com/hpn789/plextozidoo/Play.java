@@ -37,6 +37,7 @@ public class Play extends AppCompatActivity {
     private int duration = 0;
     private int viewOffset = 0;
     private String directPath = "";
+    private String videoTitle = "";
 
     private TextView textView;
     private Button playButton;
@@ -68,16 +69,43 @@ public class Play extends AppCompatActivity {
                         String path = parser.parse(targetStream);
                         if(!path.isEmpty())
                         {
-                            directPath = plexPathToLocalPath(path);
+                            String password = "";
+
+                            // Check if we can actually do the substitution, if not then pass along the original file and see if it plays
+                            String path_to_replace = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("path_to_replace", "");
+                            if(!path_to_replace.isEmpty() && path.contains(path_to_replace))
+                            {
+                                String replace_with = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("replaced_with", "");
+                                path = path.replace(path_to_replace, replace_with).replace("\\", "/");
+
+                                // If this is an SMB request add user name and password to the path
+                                String username = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("smbUsername", "");
+                                if(!username.isEmpty())
+                                {
+                                    password = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("smbPassword", "");
+                                    path = path.replace("smb://", "smb://" + username + ":" + password + "@");
+                                }
+
+                                directPath = path;
+                            }
+                            else
+                            {
+                                directPath = intent.getDataString();
+                            }
                             videoKey = parser.getVideoKey();
+                            videoTitle = parser.getVideoTitle();
                             duration = parser.getDuration();
 
                             // If the debug flag is on then update the text field
                             if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("debug", false))
                             {
+                                String pathToPrint = directPath;
+
                                 // If the path has a password in it then hide it from the debug output
-                                String password = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("smbPassword", "");
-                                String pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
+                                if(!password.isEmpty())
+                                {
+                                    pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
+                                }
                                 textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nVideo Key: %s\n\nToken: %s\n\nLibrary Key: %s\n\nMedia Type: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, videoKey, token, info.getKey(), info.getType().name));
                                 playButton.setEnabled(true);
                             }
@@ -101,9 +129,9 @@ public class Play extends AppCompatActivity {
                     }
 
                 },
-                error -> textView.setText("That didn't work"));
+                error -> Toast.makeText(getApplicationContext(), "That didn't work! (1)", Toast.LENGTH_LONG).show());
 
-// Add the request to the RequestQueue.
+        // Add the request to the RequestQueue.
         queue.add(stringRequest);
     }
 
@@ -127,9 +155,9 @@ public class Play extends AppCompatActivity {
                     }
 
                 },
-                error -> textView.setText("That didn't work!"));
+                error -> Toast.makeText(getApplicationContext(), "That didn't work!", Toast.LENGTH_LONG).show());
 
-// Add the request to the RequestQueue.
+        // Add the request to the RequestQueue.
         queue.add(stringRequest);
     }
 
@@ -141,14 +169,7 @@ public class Play extends AppCompatActivity {
 
         String inputString = intent.getDataString();
         Log.d("plex", "" + inputString);
-        int indexOfLibrary = inputString.indexOf("/library/");
-        address = inputString.substring(0, indexOfLibrary);
-        libraryKey = inputString.substring(indexOfLibrary, inputString.indexOf("?"));
-        String tmp = inputString.substring(inputString.indexOf(tokenParameter) + tokenParameter.length());
-        token = tmp.contains("&") ? tmp.substring(0, tmp.indexOf("&")) : tmp;
-
         viewOffset = intent.getIntExtra("viewOffset", 0);
-
         textView = findViewById(R.id.textView2);
         playButton = findViewById(R.id.play_button);
         playButton.setOnClickListener(v -> {
@@ -162,8 +183,38 @@ public class Play extends AppCompatActivity {
             }
         });
 
-        searchLibrary();
+        try
+        {
+            if(inputString.contains("&location=wan&"))
+            {
+                throw new Exception("Remote file, no need to continue");
+            }
 
+            if(!inputString.contains("/library/"))
+            {
+                throw new Exception("Not a library file, no need to continue");
+            }
+
+            int indexOfLibrary = inputString.indexOf("/library/");
+            address = inputString.substring(0, indexOfLibrary);
+            libraryKey = inputString.substring(indexOfLibrary, inputString.indexOf("?"));
+            String tmpToken = inputString.substring(inputString.indexOf(tokenParameter) + tokenParameter.length());
+            token = tmpToken.contains("&") ? tmpToken.substring(0, tmpToken.indexOf("&")) : tmpToken;
+        }
+        catch (Exception e)
+        {
+            // Doesn't appear to be local content so just pass the intent through to the video player and hope for the best
+            directPath = inputString;
+            if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("debug", false))
+            {
+                textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath: %s\n\nView Offset: %d", intentToString(intent), directPath, viewOffset));
+                playButton.setEnabled(true);
+            }
+
+            return;
+        }
+
+        searchLibrary();
     }
 
     protected void startPlayer(String path)
@@ -171,24 +222,6 @@ public class Play extends AppCompatActivity {
         Intent newIntent = new Intent(Intent.ACTION_VIEW);
         newIntent.setDataAndType(Uri.parse(path), "video/*" );
         startActivity(newIntent);
-    }
-
-    protected String plexPathToLocalPath(String path)
-    {
-        String path_to_replace = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("path_to_replace", "");
-        if(!path_to_replace.equals(""))
-        {
-            String replace_with = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("replaced_with", "");
-            path = path.replace(path_to_replace, replace_with).replace("\\", "/");
-
-            String username = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("smbUsername", "");
-            if(!username.equals(""))
-            {
-                String password = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("smbPassword", "");
-                path = path.replace("smb://", "smb://" + username + ":" + password + "@");
-            }
-        }
-        return path;
     }
 
     protected void startZidooPlayer(String path, int viewOffset)
@@ -202,6 +235,7 @@ public class Play extends AppCompatActivity {
         newIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         newIntent.setPackage("com.android.gallery3d");
         newIntent.setClassName("com.android.gallery3d", "com.android.gallery3d.app.MovieActivity");
+        newIntent.putExtra("title", videoTitle);
 
         if(viewOffset > 0)
         {
@@ -232,7 +266,7 @@ public class Play extends AppCompatActivity {
         if(resultCode == Activity.RESULT_OK && requestCode == 98)
         {
             int position = data.getIntExtra("position", 0);
-            if(position > 0)
+            if(position > 0 && !address.isEmpty() && !videoKey.isEmpty() && !token.isEmpty())
             {
                 RequestQueue queue = Volley.newRequestQueue(this);
                 String url;
@@ -251,7 +285,7 @@ public class Play extends AppCompatActivity {
                         response -> {
                             // Nothing to do
                         },
-                        error -> Toast.makeText(getApplicationContext(), "That didn't work!", Toast.LENGTH_LONG).show()
+                        error -> Toast.makeText(getApplicationContext(), "That didn't work! (3)", Toast.LENGTH_LONG).show()
                 );
 
                 // Add the request to the RequestQueue.
