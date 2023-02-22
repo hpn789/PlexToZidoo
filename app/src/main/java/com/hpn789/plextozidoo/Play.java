@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -108,6 +109,7 @@ public class Play extends AppCompatActivity {
                                 }
                                 textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nVideo Key: %s\n\nToken: %s\n\nLibrary Key: %s\n\nMedia Type: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, videoKey, token, info.getKey(), info.getType().name));
                                 playButton.setEnabled(true);
+                                playButton.setVisibility(View.VISIBLE);
                             }
                             // Else just play the movie
                             else
@@ -209,6 +211,7 @@ public class Play extends AppCompatActivity {
             {
                 textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath: %s\n\nView Offset: %d", intentToString(intent), directPath, viewOffset));
                 playButton.setEnabled(true);
+                playButton.setVisibility(View.VISIBLE);
             }
 
             return;

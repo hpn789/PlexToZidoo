@@ -3,7 +3,6 @@
 
     <Preference
         android:key="version"
-        android:selectable="false"
         android:persistent="false"
         android:title="@string/version_settings"
         android:summary="@string/versionName"/>
