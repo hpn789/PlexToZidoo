@@ -213,6 +213,10 @@ public class Play extends AppCompatActivity {
                 playButton.setEnabled(true);
                 playButton.setVisibility(View.VISIBLE);
             }
+            else
+            {
+                playButton.callOnClick();
+            }
 
             return;
         }
