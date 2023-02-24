@@ -47,12 +47,6 @@
             android:singleLine="true"
             android:title="@string/replaced_with" />
 
-        <SwitchPreference
-            android:enabled="false"
-            android:defaultValue="true"
-            android:key="enableCache"
-            android:title="@string/enableCache_title" />
-
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/smb_settings">

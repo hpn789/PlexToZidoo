@@ -2,10 +2,7 @@ package com.hpn789.plextozidoo;
 
 import android.os.Bundle;
 import android.text.InputType;
-import android.widget.EditText;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.EditTextPreference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -22,10 +19,6 @@ public class SettingsActivity extends AppCompatActivity {
                     .replace(R.id.settings, new SettingsFragment())
                     .commit();
         }
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayHomeAsUpEnabled(true);
-        }
     }
 
     public static class SettingsFragment extends PreferenceFragmentCompat {
@@ -39,5 +32,11 @@ public class SettingsActivity extends AppCompatActivity {
                         editText -> editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD));
             }
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
     }
 }

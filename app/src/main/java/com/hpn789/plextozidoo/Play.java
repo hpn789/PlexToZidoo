@@ -32,7 +32,8 @@ public class Play extends AppCompatActivity {
     static final String tokenParameter = "X-Plex-Token=";
     private Intent intent;
     private String address = "";
-    private String videoKey = "";
+    private String[] partId;
+    private String ratingKey = "";
     private String libraryKey = "";
     private String token = "";
     private int duration = 0;
@@ -59,7 +60,7 @@ public class Play extends AppCompatActivity {
     {
         PlexLibraryInfo info = infos.get(index);
         RequestQueue queue = Volley.newRequestQueue(this);
-        String url = address + "/library/sections/" + info.getKey() + "/search?type=" + info.getType().searchId + "&" + tokenParameter + token;
+        String url = address + "/library/sections/" + info.getKey() + "/search?type=" + info.getType().searchId + "&part=" + partId[3] + "&" + tokenParameter + token;
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 response -> {
@@ -93,7 +94,7 @@ public class Play extends AppCompatActivity {
                             {
                                 directPath = intent.getDataString();
                             }
-                            videoKey = parser.getVideoKey();
+                            ratingKey = parser.getRatingKey();
                             videoTitle = parser.getVideoTitle();
                             duration = parser.getDuration();
 
@@ -107,7 +108,7 @@ public class Play extends AppCompatActivity {
                                 {
                                     pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
                                 }
-                                textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nVideo Key: %s\n\nToken: %s\n\nLibrary Key: %s\n\nMedia Type: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, videoKey, token, info.getKey(), info.getType().name));
+                                textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Key: %s\n\nLibrary Section: %s\n\nMedia Type: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partId[3], token, libraryKey, info.getKey(), info.getType().name));
                                 playButton.setEnabled(true);
                                 playButton.setVisibility(View.VISIBLE);
                             }
@@ -200,6 +201,7 @@ public class Play extends AppCompatActivity {
             int indexOfLibrary = inputString.indexOf("/library/");
             address = inputString.substring(0, indexOfLibrary);
             libraryKey = inputString.substring(indexOfLibrary, inputString.indexOf("?"));
+            partId = libraryKey.split("/");
             String tmpToken = inputString.substring(inputString.indexOf(tokenParameter) + tokenParameter.length());
             token = tmpToken.contains("&") ? tmpToken.substring(0, tmpToken.indexOf("&")) : tmpToken;
         }
@@ -273,19 +275,19 @@ public class Play extends AppCompatActivity {
         if(resultCode == Activity.RESULT_OK && requestCode == 98)
         {
             int position = data.getIntExtra("position", 0);
-            if(position > 0 && !address.isEmpty() && !videoKey.isEmpty() && !token.isEmpty())
+            if(position > 0 && !address.isEmpty() && !ratingKey.isEmpty() && !token.isEmpty())
             {
                 RequestQueue queue = Volley.newRequestQueue(this);
                 String url;
                 if(duration > 0 && position > (duration * .9))
                 {
                     // Mark it as watched
-                    url = address + "/:/scrobble?key=" + videoKey + "&identifier=com.plexapp.plugins.library&" + tokenParameter + token;
+                    url = address + "/:/scrobble?key=" + ratingKey + "&identifier=com.plexapp.plugins.library&" + tokenParameter + token;
                 }
                 else
                 {
                     // Update progress
-                    url = address + "/:/progress?key=" + videoKey + "&identifier=com.plexapp.plugins.library&time=" + position + "&state=stopped&" + tokenParameter + token;
+                    url = address + "/:/progress?key=" + ratingKey + "&identifier=com.plexapp.plugins.library&time=" + position + "&state=stopped&" + tokenParameter + token;
                 }
 
                 StringRequest stringRequest = new StringRequest(Request.Method.GET, url,

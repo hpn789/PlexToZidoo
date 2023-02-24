@@ -13,13 +13,11 @@ public class PlexLibraryXmlParser {
     // We don't use namespaces
     private static final String ns = null;
     private String path = "";
-    private String videoKey = "";
+    private String ratingKey = "";
     private String videoTitle = "";
     private int duration = 0;
 
     private final String libraryKey;
-
-    //public List<String> entries = new ArrayList<String>();
 
     public PlexLibraryXmlParser(String aKey)
     {
@@ -39,10 +37,11 @@ public class PlexLibraryXmlParser {
         }
     }
 
-    public String getVideoKey()
+    public String getRatingKey()
     {
-        return videoKey;
+        return ratingKey;
     }
+
     public String getVideoTitle()
     {
         return videoTitle;
@@ -64,7 +63,7 @@ public class PlexLibraryXmlParser {
             // Starts by looking for the entry tag
             if(name.equals("Video"))
             {
-                videoKey = parser.getAttributeValue(null, "ratingKey");
+                ratingKey = parser.getAttributeValue(null, "ratingKey");
                 videoTitle = parser.getAttributeValue(null, "title");
 
                 String durationText = parser.getAttributeValue(null, "duration");

@@ -14,8 +14,14 @@
         android:theme="@style/Theme.PlexToZidoo">
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings"
-            android:theme="@style/Theme.PlexToZidoo.Settings"/>
+            android:theme="@style/Theme.PlexToZidoo.Settings"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".Play"
             android:theme="@style/Theme.PlexToZidoo.Play"
@@ -52,15 +58,6 @@
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="application/vnd.apple.mpegurl" />
                 <data android:mimeType="application/x-mpegurl" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".TestActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
