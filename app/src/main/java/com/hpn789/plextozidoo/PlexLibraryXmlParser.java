@@ -16,6 +16,12 @@ public class PlexLibraryXmlParser {
     private String ratingKey = "";
     private String videoTitle = "";
     private int duration = 0;
+    private int audioIndex = 0;
+    private boolean audioSelected = false;
+    private int selectedAudioIndex = 0;
+    private int subtitleIndex = 0;
+    private boolean subtitleSelected = false;
+    private int selectedSubtitleIndex = 0;
 
     private final String libraryKey;
 
@@ -52,9 +58,29 @@ public class PlexLibraryXmlParser {
         return duration;
     }
 
-    private void readXML(XmlPullParser parser) throws XmlPullParserException, IOException {
+    public boolean isAudioSelected()
+    {
+        return audioSelected;
+    }
 
+    public int getSelectedAudioIndex()
+    {
+        return selectedAudioIndex;
+    }
+
+    public boolean isSubtitleSelected()
+    {
+        return subtitleSelected;
+    }
+
+    public int getSelectedSubtitleIndex()
+    {
+        return selectedSubtitleIndex;
+    }
+
+    private void readXML(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, ns, "MediaContainer");
+
         while (parser.next() != XmlPullParser.END_TAG && path.isEmpty()) {
             if (parser.getEventType() != XmlPullParser.START_TAG) {
                 continue;
@@ -63,19 +89,6 @@ public class PlexLibraryXmlParser {
             // Starts by looking for the entry tag
             if(name.equals("Video"))
             {
-                ratingKey = parser.getAttributeValue(null, "ratingKey");
-                videoTitle = parser.getAttributeValue(null, "title");
-
-                String durationText = parser.getAttributeValue(null, "duration");
-                try
-                {
-                    duration = Integer.parseInt(durationText);
-                }
-                catch(NumberFormatException e)
-                {
-                    duration = 0;
-                }
-
                 readVideo(parser);
             }
             else
@@ -87,6 +100,20 @@ public class PlexLibraryXmlParser {
 
     private void readVideo(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, ns, "Video");
+
+        ratingKey = parser.getAttributeValue(null, "ratingKey");
+        videoTitle = parser.getAttributeValue(null, "title");
+
+        String durationText = parser.getAttributeValue(null, "duration");
+        try
+        {
+            duration = Integer.parseInt(durationText);
+        }
+        catch(NumberFormatException e)
+        {
+            duration = 0;
+        }
+
         while (parser.next() != XmlPullParser.END_TAG && path.isEmpty()) {
             if (parser.getEventType() != XmlPullParser.START_TAG) {
                 continue;
@@ -102,6 +129,7 @@ public class PlexLibraryXmlParser {
 
     private void readMedia(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, ns, "Media");
+
         while (parser.next() != XmlPullParser.END_TAG && path.isEmpty()) {
             if (parser.getEventType() != XmlPullParser.START_TAG) {
                 continue;
@@ -117,12 +145,64 @@ public class PlexLibraryXmlParser {
 
     // Processes link tags in the feed.
     private void readPart(XmlPullParser parser) throws IOException, XmlPullParserException {
+        parser.require(XmlPullParser.START_TAG, ns, "Part");
+
         String keyAttribute = parser.getAttributeValue(null, "key");
         if(keyAttribute.equals(libraryKey))
         {
             path = parser.getAttributeValue(null, "file");
+
+            while (parser.next() != XmlPullParser.END_TAG && (selectedAudioIndex == 0 || selectedSubtitleIndex == 0))
+            {
+                if (parser.getEventType() != XmlPullParser.START_TAG)
+                {
+                    continue;
+                }
+
+                String name = parser.getName();
+                if (name.equals("Stream"))
+                {
+                    readStream(parser);
+                }
+                else
+                {
+                    skip(parser);
+                }
+            }
         }
-        parser.nextTag();
+    }
+
+    private void readStream(XmlPullParser parser) throws IOException, XmlPullParserException {
+        parser.require(XmlPullParser.START_TAG, ns, "Stream");
+
+        String streamType = parser.getAttributeValue(null, "streamType");
+        String selected = parser.getAttributeValue(null, "selected");
+
+        // Audio stream
+        if(streamType.equals("2"))
+        {
+            if(selected != null && selected.equals("1"))
+            {
+                audioSelected = true;
+                selectedAudioIndex = audioIndex;
+            }
+            // Audio streams start at 0 so increment after checking if it's selected
+            audioIndex++;
+        }
+        // Subtitle stream
+        else if(streamType.equals("3"))
+        {
+            // Subtitle streams start at 1 so increment before checking if it's selected
+            subtitleIndex++;
+            if(selected != null && selected.equals("1"))
+            {
+                subtitleSelected = true;
+                selectedSubtitleIndex = subtitleIndex;
+            }
+        }
+
+        // move past this tag
+        skip(parser);
     }
 
     private void skip(XmlPullParser parser) throws XmlPullParserException, IOException {

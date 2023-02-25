@@ -32,14 +32,21 @@ public class Play extends AppCompatActivity {
     static final String tokenParameter = "X-Plex-Token=";
     private Intent intent;
     private String address = "";
-    private String[] partId;
+    private String mediaType = "";
+    private String librarySection = "";
     private String ratingKey = "";
-    private String libraryKey = "";
+    private String partKey = "";
+    private String partId = "";
     private String token = "";
     private int duration = 0;
     private int viewOffset = 0;
     private String directPath = "";
     private String videoTitle = "";
+    private boolean audioSelected = false;
+    private int selectedAudioIndex = -1;
+    private boolean subtitleSelected = false;
+    private int selectedSubtitleIndex = -1;
+    private String password = "";
 
     private TextView textView;
     private Button playButton;
@@ -56,22 +63,91 @@ public class Play extends AppCompatActivity {
         this.finish();
     }
 
-    private void searchPath(List<PlexLibraryInfo> infos, int index)
+    private void showDebugPageOrSendIntent()
     {
-        PlexLibraryInfo info = infos.get(index);
+        // If the debug flag is on then update the text field
+        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("debug", false))
+        {
+            String pathToPrint = directPath;
+
+            // If the path has a password in it then hide it from the debug output
+            if(!password.isEmpty())
+            {
+                pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
+            }
+
+            textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Section: %s\n\nMedia Type: %s\n\nSelected Audio Index: %d\n\nSelected Subtitle Index: %d", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partKey, partId, token, librarySection, mediaType, selectedAudioIndex, selectedSubtitleIndex));
+
+            playButton.setEnabled(true);
+            playButton.setVisibility(View.VISIBLE);
+        }
+        // Else just play the movie
+        else
+        {
+            playButton.callOnClick();
+        }
+    }
+
+    private void searchMetadata()
+    {
         RequestQueue queue = Volley.newRequestQueue(this);
-        String url = address + "/library/sections/" + info.getKey() + "/search?type=" + info.getType().searchId + "&part=" + partId[3] + "&" + tokenParameter + token;
+        String url = address + "/library/metadata/" + ratingKey + "?" + tokenParameter + token;
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 response -> {
                     // Display the first 500 characters of the response string.
-                    PlexLibraryXmlParser parser = new PlexLibraryXmlParser(libraryKey);
+                    PlexLibraryXmlParser parser = new PlexLibraryXmlParser(partKey);
                     InputStream targetStream = new ByteArrayInputStream(response.getBytes());
                     try {
                         String path = parser.parse(targetStream);
                         if(!path.isEmpty())
                         {
-                            String password = "";
+                            audioSelected = parser.isAudioSelected();
+                            if(audioSelected)
+                            {
+                                selectedAudioIndex = parser.getSelectedAudioIndex();
+                            }
+
+                            subtitleSelected = parser.isSubtitleSelected();
+                            if(subtitleSelected)
+                            {
+                                selectedSubtitleIndex = parser.getSelectedSubtitleIndex();
+                            }
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    showDebugPageOrSendIntent();
+                },
+                error -> Toast.makeText(getApplicationContext(), "That didn't work! (3)", Toast.LENGTH_LONG).show());
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest);
+    }
+
+    private void searchPath(List<PlexLibraryInfo> infos, int index)
+    {
+        PlexLibraryInfo info = infos.get(index);
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url = address + "/library/sections/" + info.getKey() + "/search?type=" + info.getType().searchId + "&part=" + partId + "&" + tokenParameter + token;
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    // Display the first 500 characters of the response string.
+                    PlexLibraryXmlParser parser = new PlexLibraryXmlParser(partKey);
+                    InputStream targetStream = new ByteArrayInputStream(response.getBytes());
+                    try {
+                        String path = parser.parse(targetStream);
+                        if(!path.isEmpty())
+                        {
+                            librarySection = info.getKey();
+                            mediaType = info.getType().name;
+                            ratingKey = parser.getRatingKey();
+                            videoTitle = parser.getVideoTitle();
+                            duration = parser.getDuration();
+                            password = "";
 
                             // Check if we can actually do the substitution, if not then pass along the original file and see if it plays
                             String path_to_replace = PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("path_to_replace", "");
@@ -94,29 +170,9 @@ public class Play extends AppCompatActivity {
                             {
                                 directPath = intent.getDataString();
                             }
-                            ratingKey = parser.getRatingKey();
-                            videoTitle = parser.getVideoTitle();
-                            duration = parser.getDuration();
 
-                            // If the debug flag is on then update the text field
-                            if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("debug", false))
-                            {
-                                String pathToPrint = directPath;
-
-                                // If the path has a password in it then hide it from the debug output
-                                if(!password.isEmpty())
-                                {
-                                    pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
-                                }
-                                textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Key: %s\n\nLibrary Section: %s\n\nMedia Type: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partId[3], token, libraryKey, info.getKey(), info.getType().name));
-                                playButton.setEnabled(true);
-                                playButton.setVisibility(View.VISIBLE);
-                            }
-                            // Else just play the movie
-                            else
-                            {
-                                playButton.callOnClick();
-                            }
+                            // Search the metadata for audio and subtitle indexes
+                            searchMetadata();
                         }
                         else if(index + 1 < infos.size())
                         {
@@ -124,7 +180,7 @@ public class Play extends AppCompatActivity {
                         }
                         else
                         {
-                            textView.setText(String.format(Locale.ENGLISH, "Not found\n\nIntent: %s", intentToString(intent)));
+                            textView.setText(String.format(Locale.ENGLISH, "Not found (2)\n\nIntent: %s\n\nURL: %s", intentToString(intent), url));
                         }
 
                     } catch (Exception e) {
@@ -132,7 +188,7 @@ public class Play extends AppCompatActivity {
                     }
 
                 },
-                error -> Toast.makeText(getApplicationContext(), "That didn't work! (1)", Toast.LENGTH_LONG).show());
+                error -> Toast.makeText(getApplicationContext(), "That didn't work! (2)", Toast.LENGTH_LONG).show());
 
         // Add the request to the RequestQueue.
         queue.add(stringRequest);
@@ -158,7 +214,7 @@ public class Play extends AppCompatActivity {
                     }
 
                 },
-                error -> Toast.makeText(getApplicationContext(), "That didn't work!", Toast.LENGTH_LONG).show());
+                error -> Toast.makeText(getApplicationContext(), "That didn't work! (1)", Toast.LENGTH_LONG).show());
 
         // Add the request to the RequestQueue.
         queue.add(stringRequest);
@@ -200,8 +256,12 @@ public class Play extends AppCompatActivity {
 
             int indexOfLibrary = inputString.indexOf("/library/");
             address = inputString.substring(0, indexOfLibrary);
-            libraryKey = inputString.substring(indexOfLibrary, inputString.indexOf("?"));
-            partId = libraryKey.split("/");
+            partKey = inputString.substring(indexOfLibrary, inputString.indexOf("?"));
+            String[] partDirs = partKey.split("/");
+            if(partDirs.length > 3)
+            {
+                partId = partDirs[3];
+            }
             String tmpToken = inputString.substring(inputString.indexOf(tokenParameter) + tokenParameter.length());
             token = tmpToken.contains("&") ? tmpToken.substring(0, tmpToken.indexOf("&")) : tmpToken;
         }
@@ -209,16 +269,8 @@ public class Play extends AppCompatActivity {
         {
             // Doesn't appear to be local content so just pass the intent through to the video player and hope for the best
             directPath = inputString;
-            if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("debug", false))
-            {
-                textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath: %s\n\nView Offset: %d", intentToString(intent), directPath, viewOffset));
-                playButton.setEnabled(true);
-                playButton.setVisibility(View.VISIBLE);
-            }
-            else
-            {
-                playButton.callOnClick();
-            }
+
+            showDebugPageOrSendIntent();
 
             return;
         }
@@ -254,6 +306,16 @@ public class Play extends AppCompatActivity {
         else
         {
             newIntent.putExtra("from_start", true);
+        }
+
+        if(audioSelected)
+        {
+            newIntent.putExtra("audio_idx", selectedAudioIndex);
+        }
+
+        if(subtitleSelected)
+        {
+            newIntent.putExtra("subtitle_idx", selectedSubtitleIndex);
         }
 
         newIntent.putExtra("return_result", true);
@@ -294,7 +356,7 @@ public class Play extends AppCompatActivity {
                         response -> {
                             // Nothing to do
                         },
-                        error -> Toast.makeText(getApplicationContext(), "That didn't work! (3)", Toast.LENGTH_LONG).show()
+                        error -> Toast.makeText(getApplicationContext(), "That didn't work! (4)", Toast.LENGTH_LONG).show()
                 );
 
                 // Add the request to the RequestQueue.
