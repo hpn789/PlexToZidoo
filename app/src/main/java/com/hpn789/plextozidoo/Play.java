@@ -32,8 +32,7 @@ public class Play extends AppCompatActivity {
     static final String tokenParameter = "X-Plex-Token=";
     private Intent intent;
     private String address = "";
-    private String mediaType = "";
-    private String librarySection = "";
+    private PlexLibraryInfo libraryInfo;
     private String ratingKey = "";
     private String partKey = "";
     private String partId = "";
@@ -47,6 +46,8 @@ public class Play extends AppCompatActivity {
     private boolean subtitleSelected = false;
     private int selectedSubtitleIndex = -1;
     private String password = "";
+    private int videoIndex = 0;
+    private String parentRatingKey = "";
 
     private TextView textView;
     private Button playButton;
@@ -76,7 +77,7 @@ public class Play extends AppCompatActivity {
                 pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
             }
 
-            textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Section: %s\n\nMedia Type: %s\n\nSelected Audio Index: %d\n\nSelected Subtitle Index: %d", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partKey, partId, token, librarySection, mediaType, selectedAudioIndex, selectedSubtitleIndex));
+            textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Section: %s\n\nMedia Type: %s\n\nSelected Audio Index: %d\n\nSelected Subtitle Index: %d\n\nVideo Index: %d\n\nParent Rating Key: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partKey, partId, token, libraryInfo.getKey(), libraryInfo.getType().name, selectedAudioIndex, selectedSubtitleIndex, videoIndex, parentRatingKey));
 
             playButton.setEnabled(true);
             playButton.setVisibility(View.VISIBLE);
@@ -86,6 +87,42 @@ public class Play extends AppCompatActivity {
         {
             playButton.callOnClick();
         }
+    }
+
+    private void searchFiles()
+    {
+        RequestQueue queue = Volley.newRequestQueue(this);
+        // Attempt to find the next video
+        videoIndex++;
+        String url = address + "/library/sections/" + libraryInfo.getKey() + "/search?type=" + libraryInfo.getType().searchId + "&index=" + videoIndex + "&parent=" + parentRatingKey + "&" + tokenParameter + token;
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    // Display the first 500 characters of the response string.
+                    PlexLibraryXmlParser parser = new PlexLibraryXmlParser(null);
+                    InputStream targetStream = new ByteArrayInputStream(response.getBytes());
+                    try {
+                        String path = parser.parse(targetStream);
+                        if(!path.isEmpty())
+                        {
+                            String inputString = intent.getDataString();
+                            inputString = inputString.replace(partKey, path);
+                            intent.setData(Uri.parse(inputString));
+                            intent.putExtra("viewOffset", 0);
+
+                            startActivity(intent);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                },
+                error -> Toast.makeText(getApplicationContext(), "That didn't work! (5)", Toast.LENGTH_LONG).show());
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest);
     }
 
     private void searchMetadata()
@@ -142,11 +179,12 @@ public class Play extends AppCompatActivity {
                         String path = parser.parse(targetStream);
                         if(!path.isEmpty())
                         {
-                            librarySection = info.getKey();
-                            mediaType = info.getType().name;
+                            libraryInfo = info;
                             ratingKey = parser.getRatingKey();
                             videoTitle = parser.getVideoTitle();
                             duration = parser.getDuration();
+                            videoIndex = parser.getVideoIndex();
+                            parentRatingKey = parser.getParentRatingKey();
                             password = "";
 
                             // Check if we can actually do the substitution, if not then pass along the original file and see if it plays
@@ -345,6 +383,15 @@ public class Play extends AppCompatActivity {
                 {
                     // Mark it as watched
                     url = address + "/:/scrobble?key=" + ratingKey + "&identifier=com.plexapp.plugins.library&" + tokenParameter + token;
+
+                    if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("auto_play", false))
+                    {
+                        // Go search for the next file to play
+                        if(videoIndex > 0 && parentRatingKey != null)
+                        {
+                            searchFiles();
+                        }
+                    }
                 }
                 else
                 {

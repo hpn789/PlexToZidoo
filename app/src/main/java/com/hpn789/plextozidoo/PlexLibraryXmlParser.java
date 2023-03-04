@@ -22,6 +22,8 @@ public class PlexLibraryXmlParser {
     private int subtitleIndex = 0;
     private boolean subtitleSelected = false;
     private int selectedSubtitleIndex = 0;
+    private int videoIndex = 0;
+    private String parentRatingKey = "";
 
     private final String libraryKey;
 
@@ -78,6 +80,16 @@ public class PlexLibraryXmlParser {
         return selectedSubtitleIndex;
     }
 
+    public int getVideoIndex()
+    {
+        return videoIndex;
+    }
+
+    public String getParentRatingKey()
+    {
+        return parentRatingKey;
+    }
+
     private void readXML(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, ns, "MediaContainer");
 
@@ -103,6 +115,7 @@ public class PlexLibraryXmlParser {
 
         ratingKey = parser.getAttributeValue(null, "ratingKey");
         videoTitle = parser.getAttributeValue(null, "title");
+        parentRatingKey = parser.getAttributeValue(null, "parentRatingKey");
 
         String durationText = parser.getAttributeValue(null, "duration");
         try
@@ -112,6 +125,16 @@ public class PlexLibraryXmlParser {
         catch(NumberFormatException e)
         {
             duration = 0;
+        }
+
+        String videoIndexText = parser.getAttributeValue(null, "index");
+        try
+        {
+            videoIndex = Integer.parseInt(videoIndexText);
+        }
+        catch(NumberFormatException e)
+        {
+            videoIndex = 0;
         }
 
         while (parser.next() != XmlPullParser.END_TAG && path.isEmpty()) {
@@ -148,27 +171,35 @@ public class PlexLibraryXmlParser {
         parser.require(XmlPullParser.START_TAG, ns, "Part");
 
         String keyAttribute = parser.getAttributeValue(null, "key");
-        if(keyAttribute.equals(libraryKey))
+        if(libraryKey != null)
         {
-            path = parser.getAttributeValue(null, "file");
-
-            while (parser.next() != XmlPullParser.END_TAG && (selectedAudioIndex == 0 || selectedSubtitleIndex == 0))
+            if(keyAttribute.equals(libraryKey))
             {
-                if (parser.getEventType() != XmlPullParser.START_TAG)
-                {
-                    continue;
-                }
+                path = parser.getAttributeValue(null, "file");
 
-                String name = parser.getName();
-                if (name.equals("Stream"))
+                while (parser.next() != XmlPullParser.END_TAG && (selectedAudioIndex == 0 || selectedSubtitleIndex == 0))
                 {
-                    readStream(parser);
-                }
-                else
-                {
-                    skip(parser);
+                    if (parser.getEventType() != XmlPullParser.START_TAG)
+                    {
+                        continue;
+                    }
+
+                    String name = parser.getName();
+                    if (name.equals("Stream"))
+                    {
+                        readStream(parser);
+                    }
+                    else
+                    {
+                        skip(parser);
+                    }
                 }
             }
+        }
+        // If they didn't pass a libraryKey then pass that back
+        else
+        {
+            path = keyAttribute;
         }
     }
 
