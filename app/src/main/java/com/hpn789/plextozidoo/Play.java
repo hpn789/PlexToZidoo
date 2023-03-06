@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Xml;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -18,6 +19,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.ByteArrayInputStream;
@@ -48,6 +50,7 @@ public class Play extends AppCompatActivity {
     private String password = "";
     private int videoIndex = 0;
     private String parentRatingKey = "";
+    private String server = "";
 
     private TextView textView;
     private Button playButton;
@@ -64,20 +67,33 @@ public class Play extends AppCompatActivity {
         this.finish();
     }
 
+    private void updateDebugPage()
+    {
+        String pathToPrint = directPath;
+
+        // If the path has a password in it then hide it from the debug output
+        if(!password.isEmpty())
+        {
+            pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
+        }
+
+        String librarySection = "";
+        String mediaType = "";
+        if(libraryInfo != null)
+        {
+            librarySection = libraryInfo.getKey();
+            mediaType = libraryInfo.getType().name;
+        }
+
+        textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Section: %s\n\nMedia Type: %s\n\nSelected Audio Index: %d\n\nSelected Subtitle Index: %d\n\nVideo Index: %d\n\nParent Rating Key: %s\n\nServer: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partKey, partId, token, librarySection, mediaType, selectedAudioIndex, selectedSubtitleIndex, videoIndex, parentRatingKey, server));
+    }
+
     private void showDebugPageOrSendIntent()
     {
         // If the debug flag is on then update the text field
         if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("debug", false))
         {
-            String pathToPrint = directPath;
-
-            // If the path has a password in it then hide it from the debug output
-            if(!password.isEmpty())
-            {
-                pathToPrint = directPath.replaceAll(":" + password + "@", ":********@");
-            }
-
-            textView.setText(String.format(Locale.ENGLISH, "Intent: %s\n\nPath Substitution: %s\n\nView Offset: %d\n\nDuration: %d\n\nAddress: %s\n\nRating Key: %s\n\nPart Key: %s\n\nPart ID: %s\n\nToken: %s\n\nLibrary Section: %s\n\nMedia Type: %s\n\nSelected Audio Index: %d\n\nSelected Subtitle Index: %d\n\nVideo Index: %d\n\nParent Rating Key: %s", intentToString(intent), pathToPrint, viewOffset, duration, address, ratingKey, partKey, partId, token, libraryInfo.getKey(), libraryInfo.getType().name, selectedAudioIndex, selectedSubtitleIndex, videoIndex, parentRatingKey));
+            updateDebugPage();
 
             playButton.setEnabled(true);
             playButton.setVisibility(View.VISIBLE);
@@ -218,7 +234,8 @@ public class Play extends AppCompatActivity {
                         }
                         else
                         {
-                            textView.setText(String.format(Locale.ENGLISH, "Not found (2)\n\nIntent: %s\n\nURL: %s", intentToString(intent), url));
+                            directPath = url;
+                            updateDebugPage();
                         }
 
                     } catch (Exception e) {
@@ -258,6 +275,37 @@ public class Play extends AppCompatActivity {
         queue.add(stringRequest);
     }
 
+    private void findServer()
+    {
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url = address + "/identity?" + tokenParameter + token;
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    // Display the first 500 characters of the response string.
+                    InputStream targetStream = new ByteArrayInputStream(response.getBytes());
+                    try
+                    {
+                        XmlPullParser parser = Xml.newPullParser();
+                        parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
+                        parser.setInput(targetStream, null);
+                        parser.nextTag();
+                        parser.require(XmlPullParser.START_TAG, null, "MediaContainer");
+                        server = parser.getAttributeValue(null, "machineIdentifier");
+                    }
+                    catch (XmlPullParserException | IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                    searchLibrary();
+                },
+                error -> Toast.makeText(getApplicationContext(), "That didn't work! (6)", Toast.LENGTH_LONG).show());
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest);
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -282,11 +330,6 @@ public class Play extends AppCompatActivity {
 
         try
         {
-            if(inputString.contains("&location=wan&"))
-            {
-                throw new Exception("Remote file, no need to continue");
-            }
-
             if(!inputString.contains("/library/"))
             {
                 throw new Exception("Not a library file, no need to continue");
@@ -313,7 +356,7 @@ public class Play extends AppCompatActivity {
             return;
         }
 
-        searchLibrary();
+        findServer();
     }
 
     protected void startPlayer(String path)
@@ -397,11 +440,24 @@ public class Play extends AppCompatActivity {
                 {
                     // Update progress
                     url = address + "/:/progress?key=" + ratingKey + "&identifier=com.plexapp.plugins.library&time=" + position + "&state=stopped&" + tokenParameter + token;
+
+                    // Can't update the progress on remote streams so just return .. get "Unauthorized" for some reason
+                    if(intent.getDataString().contains("&location=wan&"))
+                    {
+                        return;
+                    }
                 }
 
                 StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                         response -> {
-                            // Nothing to do
+                            if(!server.isEmpty())
+                            {
+                                // This will try and automatically refresh the plex client with the progress/watched status we just updated on the plex server
+                                Intent plex = new Intent(Intent.ACTION_VIEW);
+                                plex.setClassName("com.plexapp.android", "com.plexapp.plex.activities.SplashActivity");
+                                plex.setData(Uri.parse("plex://server://" + server + "/com.plexapp.plugins.library/library/metadata/" + ratingKey));
+                                startActivity(plex);
+                            }
                         },
                         error -> Toast.makeText(getApplicationContext(), "That didn't work! (4)", Toast.LENGTH_LONG).show()
                 );
