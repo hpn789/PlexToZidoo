@@ -377,7 +377,15 @@ public class Play extends AppCompatActivity {
         newIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         newIntent.setPackage("com.android.gallery3d");
         newIntent.setClassName("com.android.gallery3d", "com.android.gallery3d.app.MovieActivity");
-        newIntent.putExtra("title", videoTitle);
+
+        if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("showTitle", true))
+        {
+            newIntent.putExtra("title", videoTitle);
+        }
+        else
+        {
+            newIntent.putExtra("title", "");
+        }
 
         if(viewOffset > 0)
         {

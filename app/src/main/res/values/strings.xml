@@ -12,11 +12,12 @@
     <string name="debug_title">Debug data</string>
     <!-- Player Preferences -->
     <string name="useZidooPlayer_title">Use zidoo native player</string>
+    <string name="showTitle_title">Show title when zidoo player starts</string>
+    <string name="auto_play_title">Auto play next episode</string>
     <!-- Plex Preferences -->
     <string name="libraries_title">Plex libraries name to search-in (separated by ",")</string>
     <string name="path_to_replace">Part of the path to replace</string>
     <string name="replaced_with">Replaced with</string>
-    <string name="auto_play_title">Auto play next episode</string>
     <!-- Smb Preferences -->
     <string name="smbUsername_title">Smb username (if needed)</string>
     <string name="smbPassword_title">Smb password (if needed)</string>

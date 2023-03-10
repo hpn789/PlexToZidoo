@@ -23,6 +23,18 @@
             android:key="useZidooPlayer"
             android:title="@string/useZidooPlayer_title" />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="showTitle"
+            android:title="@string/showTitle_title"
+            android:dependency="useZidooPlayer" />
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="auto_play"
+            android:title="@string/auto_play_title"
+            android:dependency="useZidooPlayer" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/plex_settings">
@@ -46,11 +58,6 @@
             app:useSimpleSummaryProvider="true"
             android:singleLine="true"
             android:title="@string/replaced_with" />
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="auto_play"
-            android:title="@string/auto_play_title" />
 
     </PreferenceCategory>
 
